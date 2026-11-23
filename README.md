@@ -61,14 +61,18 @@ Lo spec non ricompila: prende il binario già compilato e gli asset da
 
 ```bash
 cargo build --release
-mkdir -p packaging/rpmbuild/SOURCES packaging/rpmbuild/SPECS
-cp target/release/peats-browser packaging/SOURCES/* packaging/rpmbuild/SOURCES/
-cp packaging/peats-browser.spec packaging/rpmbuild/SPECS/
-rpmbuild --define "_topdir $PWD/packaging/rpmbuild" -bb packaging/rpmbuild/SPECS/peats-browser.spec
+mkdir -p packaging/rpmbuild dist
+install -m0755 target/release/peats-browser packaging/SOURCES/peats-browser
+rpmbuild -bb packaging/peats-browser.spec \
+    --define "_topdir $PWD/packaging/rpmbuild" \
+    --define "_sourcedir $PWD/packaging/SOURCES" \
+    --define "_rpmdir $PWD/dist" \
+    --define "_rpmfilename %{NAME}-%{VERSION}-%{RELEASE}.%{ARCH}.rpm" \
+    --define "debug_package %{nil}"
 ```
 
-Il pacchetto esce in `packaging/rpmbuild/RPMS/x86_64/` e si installa con
-`dnf install` o `rpm -i`. Serve WebKitGTK 6.0, GTK 4 e libadwaita di sistema.
+Il pacchetto esce in `dist/peats-browser-0.1.0-1.fc44.x86_64.rpm` e si installa
+con `dnf install` o `rpm -i`. Serve WebKitGTK 6.0, GTK 4 e libadwaita di sistema.
 
 ## Peats per Windows
 
@@ -89,6 +93,44 @@ e l'aggiornamento automatico specifico per Windows: sono i passaggi successivi.
 La compilazione è verificata dal workflow `.github/workflows/windows.yml`; la
 build non è mai stata eseguita su una macchina Windows reale durante lo
 sviluppo, quindi il primo avvio va provato lì.
+
+### Pacchetto MSI
+
+L'eseguibile si distribuisce come MSI, che è anche quello che Peats scarica
+per aggiornarsi su Windows (lo installa con `msiexec /i`):
+
+```bash
+cargo xwin build --release -p peats-windows --target x86_64-pc-windows-msvc \
+    --cross-compiler clang --msvc-sysroot ~/.cache/windows-msvc-sysroot/windows-msvc-sysroot
+packaging/windows/build-msi.sh
+# -> dist/peats-browser-0.1.0-x64.msi
+```
+
+Lo script sostituisce versione e percorso dell'eseguibile in
+`packaging/windows/peats.wxs.in` e compila con `wixl` (pacchetto `msitools`), che
+funziona anche su Linux: nessun toolset WiX di Microsoft. L'MSI installa in
+`C:\Program Files\Peats` (come `peats-browser.exe`), aggiunge «Peats Browser» al
+menu Start e condivide lo stesso `UpgradeCode` fra le versioni con
+`MajorUpgrade`, così un nuovo MSI aggiorna l'installazione esistente invece di
+affiancarne una seconda. Serve il WebView2 Runtime (di serie su Windows 11).
+
+## Release
+
+Allegati della versione 0.1.0 su GitHub Releases:
+
+| File | A cosa serve |
+| --- | --- |
+| `peats-browser-0.1.0-1.fc44.x86_64.rpm` | Linux Fedora, si installa con `dnf` |
+| `peats-browser-0.1.0-x64.msi` | Windows: installazione e aggiornamenti |
+| `peats-browser-0.1.0-portable.exe` | Windows: prova senza installare |
+| `SHA256SUMS` | impronte SHA-256 dei tre file |
+
+Il tag della release deve essere il numero di versione (`0.1.0` o `v0.1.0`):
+Peats lo confronta numericamente con quello installato. Fra gli allegati Windows
+la ricerca sceglie l'MSI (il nome contiene `x64`, il portable no) e su Linux il
+RPM `x86_64`. La descrizione della release può riportare la riga
+`sha256: <impronta>` come ripiego: l'app usa di norma il `digest` che GitHub
+calcola per ogni allegato.
 
 ## Test
 

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Sorgente del pacchetto MSI di Peats per Windows.
+
+  Viene compilato con `wixl` (pacchetto msitools), quindi anche da Linux, senza
+  bisogno del toolset WiX di Microsoft. build-msi.sh sostituisce @@VERSION@@ con
+  la versione a quattro numeri e @@SOURCE@@ con il percorso dell'eseguibile.
+-->
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product
+      Id="{2B7E4C61-8F3A-4D95-A1C6-3E8D7B2F9045}"
+      Name="Peats Browser"
+      Language="1033"
+      Version="@@VERSION@@"
+      Manufacturer="Peats"
+      UpgradeCode="{7C3F1D42-9A6B-4E58-8C2E-5B1F0A9D3E71}">
+
+    <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine"/>
+    <!-- Stesso UpgradeCode fra le versioni: msiexec aggiorna l'installazione
+         esistente invece di affiancarne una seconda. -->
+    <MajorUpgrade DowngradeErrorMessage="È già installata una versione più recente di Peats Browser."/>
+    <Media Id="1" Cabinet="peats.cab" EmbedCab="yes"/>
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFiles64Folder">
+        <Directory Id="INSTALLDIR" Name="Peats">
+          <Component Id="PeatsExe" Guid="{5A9D2E07-6C41-4B38-9F72-D1A4C8E60B53}">
+            <File Id="PeatsExeFile" Name="peats-browser.exe"
+                  Source="@@SOURCE@@" KeyPath="yes"/>
+          </Component>
+        </Directory>
+      </Directory>
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="PeatsMenuFolder" Name="Peats">
+          <Component Id="PeatsShortcut" Guid="{C4E6B18A-2D75-4F09-8B63-7A0E9D5C1F28}">
+            <Shortcut Id="PeatsMenuShortcut" Name="Peats Browser"
+                      Description="Browser WebView2 con il core condiviso di Peats"
+                      Target="[INSTALLDIR]peats-browser.exe"
+                      WorkingDirectory="INSTALLDIR"/>
+            <RegistryValue Root="HKLM" Key="Software\Peats\Browser"
+                           Name="VoceMenu" Type="integer" Value="1" KeyPath="yes"/>
+          </Component>
+        </Directory>
+      </Directory>
+    </Directory>
+
+    <Feature Id="PeatsMain" Title="Peats Browser" Level="1">
+      <ComponentRef Id="PeatsExe"/>
+      <ComponentRef Id="PeatsShortcut"/>
+    </Feature>
+  </Product>
+</Wix>

@@ -9,4 +9,6 @@
 # Il token di push non ha lo scope `workflow`: il file resta in locale e la CI
 # si potrà aggiungere quando il token lo consente, senza bloccare i push.
 /.github/workflows/
+# Binario copiato in SOURCES prima di rpmbuild: è un prodotto di build.
+/packaging/SOURCES/peats-browser
 *.swp
