@@ -5,6 +5,10 @@
 //! sotto di essa. Tutto ciò che non è interfaccia (impostazioni, cronologia,
 //! risoluzione degli indirizzi, segnalibri) arriva da `peats-core`.
 
+// Un browser è un'applicazione grafica: senza questo, Windows apre anche una
+// console vuota accanto alla finestra.
+#![cfg_attr(windows, windows_subsystem = "windows")]
+
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -66,7 +70,9 @@ fn main() -> anyhow::Result<()> {
             .with_url(HOME)
             .with_bounds(rect(0.0, BAR_HEIGHT, size.width, below_bar(size.height)))
             .with_navigation_handler(move |url| {
-                let _ = app.storage.add_history(&url, "");
+                let _ = app
+                    .storage
+                    .add_history_many(&[(url.clone(), String::new())]);
                 if let Some(chrome) = chrome_slot.borrow().as_ref() {
                     let _ = chrome.evaluate_script(&format!(
                         "window.peats.setAddress({});",

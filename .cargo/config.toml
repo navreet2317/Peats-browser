@@ -1,0 +1,5 @@
+# Peats per Windows viene distribuito come singolo eseguibile: la CRT statica
+# evita di richiedere il Visual C++ Redistributable sulle macchine degli utenti.
+# Vale solo per il target Windows MSVC, non per la build Linux.
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]
