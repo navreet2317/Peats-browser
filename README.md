@@ -112,7 +112,10 @@ funziona anche su Linux: nessun toolset WiX di Microsoft. L'MSI installa in
 `C:\Program Files\Peats` (come `peats-browser.exe`), aggiunge «Peats Browser» al
 menu Start e condivide lo stesso `UpgradeCode` fra le versioni con
 `MajorUpgrade`, così un nuovo MSI aggiorna l'installazione esistente invece di
-affiancarne una seconda. Serve il WebView2 Runtime (di serie su Windows 11).
+affiancarne una seconda. Il `ProductCode` viene derivato dalla versione a ogni
+build (UUID v5 sull'UpgradeCode): cambia quando cambia la versione, quindi
+`msiexec` riconosce il pacchetto come nuovo, ma resta identico se si ricostruisce
+la stessa versione. Serve il WebView2 Runtime (di serie su Windows 11).
 
 ## Release
 

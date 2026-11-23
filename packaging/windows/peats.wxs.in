@@ -3,12 +3,14 @@
   Sorgente del pacchetto MSI di Peats per Windows.
 
   Viene compilato con `wixl` (pacchetto msitools), quindi anche da Linux, senza
-  bisogno del toolset WiX di Microsoft. build-msi.sh sostituisce @@VERSION@@ con
-  la versione a quattro numeri e @@SOURCE@@ con il percorso dell'eseguibile.
+  bisogno del toolset WiX di Microsoft.   build-msi.sh sostituisce @@VERSION@@ con
+  la versione a quattro numeri, @@PRODUCTCODE@@ con un GUID derivato da quella
+  versione (ne serve uno nuovo a ogni versione, altrimenti msiexec non
+  riconosce l'aggiornamento) e @@SOURCE@@ con il percorso dell'eseguibile.
 -->
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
   <Product
-      Id="{2B7E4C61-8F3A-4D95-A1C6-3E8D7B2F9045}"
+      Id="@@PRODUCTCODE@@"
       Name="Peats Browser"
       Language="1033"
       Version="@@VERSION@@"
