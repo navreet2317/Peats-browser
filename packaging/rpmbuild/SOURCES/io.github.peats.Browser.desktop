@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Peats
+GenericName=Web Browser
+Comment=Browser leggero con blocco contenuti, spazi isolati e vista affiancata
+Exec=peats-browser %U
+Icon=io.github.peats.Browser
+Terminal=false
+Categories=Network;WebBrowser;
+Keywords=web;browser;internet;navigazione;
+StartupNotify=true
+StartupWMClass=io.github.peats.Browser
+MimeType=x-scheme-handler/http;x-scheme-handler/https;text/html;

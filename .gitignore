@@ -1,0 +1,13 @@
+/target
+/dist
+/packaging/rpmbuild/BUILD
+/packaging/rpmbuild/BUILDROOT
+/packaging/rpmbuild/RPMS
+/packaging/rpmbuild/SRPMS
+/packaging/rpmbuild/SOURCES/peats-browser
+/packaging/rpmbuild/SOURCES/*.rpm
+/.freebuff
+/.cloud-attachments
+/.directory
+/output.pdf
+*.swp

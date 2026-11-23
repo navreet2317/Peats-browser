@@ -1,0 +1,404 @@
+/* Peats — tema GTK costruito sui colori di sistema (libadwaita).
+
+   Regole generali:
+   - le superfici usano `alpha(@window_fg_color, …)` così funzionano in chiaro
+     e in scuro senza duplicare i valori;
+   - l'accento è sempre `@accent_bg_color`, quello scelto dall'utente;
+   - le transizioni sono brevi (120–160 ms) e solo su colori, bordi e ombre:
+     niente animazioni che rallentano l'uso quotidiano. */
+
+@define-color peats_surface alpha(@window_fg_color, 0.05);
+@define-color peats_surface_hover alpha(@window_fg_color, 0.085);
+@define-color peats_border alpha(@window_fg_color, 0.09);
+@define-color peats_soft_accent mix(@accent_bg_color, @window_bg_color, 0.18);
+@define-color peats_accent_border alpha(@accent_bg_color, 0.55);
+
+/* ------------------------------------------------------------- Barra laterale */
+
+.sidebar {
+  background:
+    linear-gradient(180deg, alpha(@window_fg_color, 0.04), transparent 55%),
+    alpha(@window_fg_color, 0.015);
+  border-right: 1px solid @peats_border;
+}
+
+.sidebar-header {
+  min-height: 32px;
+}
+
+.sidebar-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  opacity: 0.4;
+}
+
+.workspace-button {
+  font-weight: 650;
+  border-radius: 9px;
+  padding: 4px 10px;
+  transition: background-color 140ms ease;
+}
+
+.workspace-button:hover {
+  background: @peats_surface_hover;
+}
+
+/* Schede fissate: tile compatte in cima alla barra laterale. */
+.pinned-strip {
+  padding: 2px 0 8px 0;
+  border-bottom: 1px solid @peats_border;
+}
+
+.pinned-tile {
+  min-width: 34px;
+  min-height: 34px;
+  padding: 0;
+  border-radius: 11px;
+  background: @peats_surface;
+  border: 1px solid transparent;
+  box-shadow: none;
+  transition: background-color 150ms ease, box-shadow 150ms ease,
+    border-color 150ms ease;
+}
+
+.pinned-tile:hover {
+  background: @peats_surface_hover;
+  box-shadow: 0 4px 14px alpha(@window_fg_color, 0.10);
+}
+
+.pinned-tile-active {
+  background: @peats_soft_accent;
+  border-color: @peats_accent_border;
+  box-shadow: 0 4px 14px alpha(@accent_bg_color, 0.22);
+}
+
+/* ------------------------------------------------------------------ Schede */
+
+.tab-scroll,
+.tab-list {
+  background: transparent;
+}
+
+.tab-row {
+  margin: 2px 8px;
+  border-radius: 10px;
+  border: none;
+  box-shadow: inset 2px 0 transparent;
+  transition: background-color 140ms ease, box-shadow 140ms ease;
+}
+
+.tab-row:hover {
+  background: @peats_surface;
+}
+
+.tab-row:selected {
+  background: @peats_soft_accent;
+  box-shadow: inset 2px 0 @accent_bg_color;
+}
+
+.tab-row:selected .tab-title {
+  font-weight: 650;
+}
+
+.tab-in-group {
+  margin-left: 18px;
+}
+
+.tab-title {
+  font-size: 13px;
+}
+
+.tab-favicon {
+  opacity: 0.92;
+}
+
+.tab-pin {
+  color: @accent_bg_color;
+}
+
+.tab-close {
+  min-width: 24px;
+  min-height: 24px;
+  padding: 0;
+  border-radius: 7px;
+  opacity: 0.34;
+  transition: opacity 140ms ease, background-color 140ms ease;
+}
+
+.tab-row:hover .tab-close,
+.tab-row:selected .tab-close {
+  opacity: 0.9;
+}
+
+.tab-close:hover {
+  background: alpha(@window_fg_color, 0.14);
+}
+
+/* ---------------------------------------------------------- Gruppi schede */
+
+.tab-group-row {
+  margin: 6px 8px 2px 8px;
+  border-radius: 10px;
+  min-height: 26px;
+  border: none;
+  transition: background-color 140ms ease;
+}
+
+.tab-group-row:hover {
+  background: alpha(@window_fg_color, 0.06);
+}
+
+.tab-group-title {
+  font-size: 12px;
+  font-weight: 650;
+  opacity: 0.86;
+}
+
+.tab-group-count {
+  font-size: 11px;
+  opacity: 0.5;
+}
+
+.tab-group-chevron {
+  opacity: 0.55;
+}
+
+.group-dot {
+  border-radius: 4px;
+  min-width: 8px;
+  min-height: 8px;
+}
+
+.group-dot.group-blue { background: #3584e4; }
+.group-dot.group-green { background: #33d17a; }
+.group-dot.group-orange { background: #ff7800; }
+.group-dot.group-purple { background: #9141ac; }
+.group-dot.group-red { background: #e01b24; }
+.group-dot.group-teal { background: #2190a4; }
+.group-dot.group-yellow { background: #f5c211; }
+.group-dot.group-pink { background: #d56199; }
+
+.tab-row.group-blue { box-shadow: inset 2px 0 #3584e4; }
+.tab-row.group-green { box-shadow: inset 2px 0 #33d17a; }
+.tab-row.group-orange { box-shadow: inset 2px 0 #ff7800; }
+.tab-row.group-purple { box-shadow: inset 2px 0 #9141ac; }
+.tab-row.group-red { box-shadow: inset 2px 0 #e01b24; }
+.tab-row.group-teal { box-shadow: inset 2px 0 #2190a4; }
+.tab-row.group-yellow { box-shadow: inset 2px 0 #f5c211; }
+.tab-row.group-pink { box-shadow: inset 2px 0 #d56199; }
+
+.sidebar-separator {
+  margin: 2px 10px;
+  opacity: 0.4;
+}
+
+.sidebar-actions {
+  background: transparent;
+}
+
+.sidebar-action {
+  min-width: 34px;
+  min-height: 34px;
+  border-radius: 9px;
+  padding: 0;
+  transition: background-color 140ms ease;
+}
+
+.sidebar-action:hover {
+  background: @peats_surface_hover;
+}
+
+/* ------------------------------------------------------- Barra degli strumenti */
+
+.nav-button {
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+  border-radius: 999px;
+  transition: background-color 140ms ease, opacity 140ms ease;
+}
+
+.nav-button:hover {
+  background: @peats_surface_hover;
+}
+
+.nav-button:active {
+  background: alpha(@window_fg_color, 0.12);
+}
+
+/* L'indirizzo è una pillola che si illumina quando la si usa. */
+.address-entry {
+  min-height: 36px;
+  border-radius: 999px;
+  background: @peats_surface;
+  border: 1px solid @peats_border;
+  box-shadow: none;
+  transition: background-color 150ms ease, border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.address-entry:hover {
+  background: @peats_surface_hover;
+}
+
+.address-entry:focus,
+.address-entry:focus-within {
+  background: alpha(@window_fg_color, 0.09);
+  border-color: @peats_accent_border;
+  box-shadow: 0 0 0 3px alpha(@accent_bg_color, 0.16);
+}
+
+.loading-progress {
+  min-height: 2px;
+  margin: 0;
+  padding: 0;
+}
+
+.loading-progress trough {
+  min-height: 2px;
+  border-radius: 0;
+  background: transparent;
+}
+
+.loading-progress progress {
+  min-height: 2px;
+  border-radius: 0;
+  background: linear-gradient(90deg, @accent_bg_color,
+      mix(@accent_bg_color, #a06bff, 0.55));
+}
+
+/* Stati dei controlli: focus visibile da tastiera, disabilitato leggibile
+   ma chiaramente inattivo. */
+button:focus-visible,
+entry:focus-visible,
+row:focus-visible,
+listbox:focus-visible {
+  outline: 2px solid alpha(@accent_bg_color, 0.7);
+  outline-offset: 1px;
+}
+
+button:disabled,
+entry:disabled,
+switch:disabled {
+  opacity: 0.45;
+}
+
+/* ------------------------------------------------------------------ Dialoghi */
+
+.dialog-list {
+  background: transparent;
+}
+
+.dialog-list row {
+  border-radius: 9px;
+}
+
+.dialog-row {
+  border-bottom: 1px solid alpha(@window_fg_color, 0.055);
+}
+
+.dialog-row:hover {
+  background: alpha(@window_fg_color, 0.045);
+}
+
+.row-title {
+  font-weight: 600;
+}
+
+.row-subtitle {
+  font-size: 12px;
+  opacity: 0.62;
+}
+
+/* ------------------------------------------------------------------ Popover */
+
+.privacy-popover,
+.suggestion-popover {
+  padding: 0;
+}
+
+.privacy-popover > contents,
+.suggestion-popover > contents {
+  border-radius: 14px;
+  animation: peats-appear 130ms ease-out;
+}
+
+@keyframes peats-appear {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.privacy-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  margin-bottom: 2px;
+}
+
+.privacy-action {
+  border-radius: 9px;
+}
+
+/* --------------------------------------------------------------- Suggerimenti */
+
+.suggestion-list {
+  background: transparent;
+}
+
+.suggestion-list row {
+  border-radius: 10px;
+  transition: background-color 120ms ease;
+}
+
+.suggestion-list row:hover {
+  background: @peats_surface;
+}
+
+.suggestion-list row:selected,
+.suggestion-list row.suggestion-active {
+  background: @peats_soft_accent;
+}
+
+.suggestion-title {
+  font-weight: 600;
+}
+
+.suggestion-subtitle {
+  font-size: 12px;
+  opacity: 0.64;
+}
+
+.suggestion-icon {
+  opacity: 0.8;
+}
+
+.suggestion-kind {
+  font-size: 11px;
+  opacity: 0.62;
+  background: alpha(@window_fg_color, 0.07);
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+
+/* --------------------------------------------------------------- Varie */
+
+.download-failed {
+  font-size: 12px;
+  color: #e01b24;
+  opacity: 0.9;
+}
+
+.empty-state {
+  font-size: 13px;
+  opacity: 0.58;
+}
+
+.form-error {
+  color: #e01b24;
+  font-size: 12px;
+}
