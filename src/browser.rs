@@ -11,15 +11,15 @@ use gtk::{gdk, gio, glib, pango};
 use webkit::prelude::*;
 use webkit::{LoadEvent, NetworkSession, UserContentManager, WebView};
 
-use crate::blocklist;
-use crate::model::{
+use peats_core::blocklist;
+use peats_core::model::{
     Bookmark, DownloadEntry, GROUP_COLORS, GroupId, HistoryEntry, SearchEngine, Session, Settings,
     TabGroup, TabId, TabSession, ThemePreference, WorkspaceId, WorkspaceSession,
 };
-use crate::reader::READER_JS;
-use crate::storage::{HistoryOrder, Paths, Storage, StoredCredential, load_json, save_json};
-use crate::suggest::{self, Candidate, EngineSpec, Suggestion, SuggestionKind};
-use crate::url::{
+use peats_core::reader::READER_JS;
+use peats_core::storage::{HistoryOrder, Paths, Storage, StoredCredential, load_json, save_json};
+use peats_core::suggest::{self, Candidate, EngineSpec, Suggestion, SuggestionKind};
+use peats_core::url::{
     KeywordEngine, is_history_url, origin_of, resolve_input, resolve_input_with_keywords, search_url,
 };
 
@@ -1317,7 +1317,7 @@ impl Browser {
             }
         }
         let url = if configured.is_empty() {
-            crate::update::DEFAULT_REPO_URL.to_owned()
+            peats_core::update::DEFAULT_REPO_URL.to_owned()
         } else {
             configured
         };
@@ -1327,7 +1327,7 @@ impl Browser {
         }
         // Un indirizzo di repository GitHub diventa la richiesta alla API delle
         // release; qualsiasi altro indirizzo è letto come manifest JSON.
-        let github = crate::update::github_api_url(&url);
+        let github = peats_core::update::github_api_url(&url);
         let endpoint = github.clone().unwrap_or_else(|| url.clone());
         if manual {
             self.toast("Controllo degli aggiornamenti…");
@@ -1377,9 +1377,9 @@ impl Browser {
                     }
                 }
                 let parsed = if from_github {
-                    crate::update::manifest_from_github_release(&text)
+                    peats_core::update::manifest_from_github_release(&text)
                 } else {
-                    crate::update::parse_manifest(&text)
+                    peats_core::update::parse_manifest(&text)
                 };
                 match parsed {
                     Ok(manifest) => browser.offer_update(manifest),
@@ -1389,14 +1389,14 @@ impl Browser {
         );
     }
 
-    fn offer_update(self: &Rc<Self>, manifest: crate::update::Manifest) {
+    fn offer_update(self: &Rc<Self>, manifest: peats_core::update::Manifest) {
         {
             let mut state = self.state.borrow_mut();
             state.settings.last_update_check = unix_seconds();
         }
         self.save_settings();
 
-        if !crate::update::is_newer(env!("CARGO_PKG_VERSION"), &manifest.version) {
+        if !peats_core::update::is_newer(env!("CARGO_PKG_VERSION"), &manifest.version) {
             self.toast(&format!(
                 "Peats è aggiornato ({})",
                 env!("CARGO_PKG_VERSION")
@@ -1447,7 +1447,7 @@ impl Browser {
         dialog.present(Some(&self.window));
     }
 
-    fn download_update(self: &Rc<Self>, manifest: crate::update::Manifest) {
+    fn download_update(self: &Rc<Self>, manifest: peats_core::update::Manifest) {
         let Ok(message) = soup::Message::new("GET", &manifest.url) else {
             self.toast("Indirizzo del pacchetto non valido");
             return;
@@ -1476,17 +1476,17 @@ impl Browser {
         );
     }
 
-    fn install_update(self: &Rc<Self>, manifest: &crate::update::Manifest, bytes: &[u8]) {
+    fn install_update(self: &Rc<Self>, manifest: &peats_core::update::Manifest, bytes: &[u8]) {
         let expected = manifest.sha256.trim().to_ascii_lowercase();
         if expected.is_empty() {
             self.toast("La release non contiene lo SHA-256 del pacchetto: aggiornamento annullato");
             return;
         }
-        if crate::update::sha256_hex(bytes) != expected {
+        if peats_core::update::sha256_hex(bytes) != expected {
             self.toast("Il pacchetto non corrisponde allo SHA-256 del manifest");
             return;
         }
-        if !crate::update::managed_install() {
+        if !peats_core::update::managed_install() {
             self.toast("Build di sviluppo: nessuna installazione automatica");
             return;
         }
@@ -1514,7 +1514,7 @@ impl Browser {
             self.toast(&format!("Pacchetto non salvato: {error}"));
             return;
         }
-        match crate::update::install_command(&destination).spawn() {
+        match peats_core::update::install_command(&destination).spawn() {
             Ok(_) => self.toast("Autorizza l'installazione nella finestra di sistema"),
             Err(error) => self.toast(&format!("Installazione non avviata: {error}")),
         }
@@ -4186,7 +4186,7 @@ impl Browser {
     }
 
     fn install_extensions(&self) {
-        let extensions = crate::extensions::load_all(&self.paths.extensions_dir);
+        let extensions = peats_core::extensions::load_all(&self.paths.extensions_dir);
         for extension in &extensions {
             let patterns = extension.patterns();
             let allow_list = patterns.iter().map(String::as_str).collect::<Vec<_>>();
@@ -4232,7 +4232,7 @@ impl Browser {
         }
         if signals {
             let script = webkit::UserScript::new(
-                &crate::privacy::signals_script(),
+                &peats_core::privacy::signals_script(),
                 webkit::UserContentInjectedFrames::TopFrame,
                 webkit::UserScriptInjectionTime::Start,
                 &[],
@@ -4247,7 +4247,7 @@ impl Browser {
         }
         if consent {
             let script = webkit::UserScript::new(
-                &crate::consent::script(),
+                &peats_core::consent::script(),
                 webkit::UserContentInjectedFrames::TopFrame,
                 webkit::UserScriptInjectionTime::End,
                 &[],
@@ -4324,7 +4324,7 @@ impl Browser {
 
     /// Descrizione della lista in uso: fonte, licenza, host e data.
     fn filter_status(&self) -> String {
-        match crate::filters::load_cache(&self.filter_dir()) {
+        match peats_core::filters::load_cache(&self.filter_dir()) {
             Some((meta, hosts)) => {
                 let date = glib::DateTime::from_unix_local(meta.updated_at)
                     .ok()
@@ -4368,17 +4368,17 @@ impl Browser {
             return;
         }
 
-        let cached = crate::filters::load_cache(&directory)
+        let cached = peats_core::filters::load_cache(&directory)
             .map(|(_, hosts)| hosts)
             .unwrap_or_default();
-        let hosts = crate::filters::all_hosts(&cached);
-        let exceptions = crate::filters::exception_hosts(&self.block_exceptions());
+        let hosts = peats_core::filters::all_hosts(&cached);
+        let exceptions = peats_core::filters::exception_hosts(&self.block_exceptions());
         let cosmetic = self.state.borrow().settings.cosmetic_blocking;
-        let json = crate::filters::build_filter_json(&hosts, &exceptions, cosmetic);
-        let fingerprint = crate::filters::fingerprint(&json);
+        let json = peats_core::filters::build_filter_json(&hosts, &exceptions, cosmetic);
+        let fingerprint = peats_core::filters::fingerprint(&json);
         let identifier = blocklist::FILTER_IDENTIFIER;
 
-        let reusable = crate::filters::load_compiled(&directory)
+        let reusable = peats_core::filters::load_compiled(&directory)
             .map(|meta| meta.identifier == identifier && meta.fingerprint == fingerprint)
             .unwrap_or(false);
 
@@ -4440,11 +4440,11 @@ impl Browser {
             move |result| match result {
                 Ok(filter) => {
                     manager.add_filter(&filter);
-                    let meta = crate::filters::CompiledMeta {
+                    let meta = peats_core::filters::CompiledMeta {
                         identifier: identifier.to_owned(),
                         fingerprint,
                     };
-                    if let Err(error) = crate::filters::save_compiled(&directory, &meta) {
+                    if let Err(error) = peats_core::filters::save_compiled(&directory, &meta) {
                         eprintln!("cannot save compiled filter metadata: {error}");
                     }
                     if let Some(browser) = weak.upgrade() {
@@ -4464,7 +4464,7 @@ impl Browser {
     /// Scarica la lista pubblica e la converte; in caso di errore la copia
     /// locale precedente resta in uso.
     fn update_filter_lists(self: &Rc<Self>, quiet: bool) {
-        let url = crate::filters::list_url();
+        let url = peats_core::filters::list_url();
         let Ok(message) = soup::Message::new("GET", &url) else {
             self.toast("URL della lista non valido");
             return;
@@ -4484,7 +4484,7 @@ impl Browser {
                     Ok(bytes) => {
                         let data: &[u8] = bytes.as_ref();
                         let text = String::from_utf8_lossy(data);
-                        let hosts = crate::filters::parse_hosts(&text);
+                        let hosts = peats_core::filters::parse_hosts(&text);
                         if hosts.len() < 100 {
                             if !quiet {
                                 browser.toast(
@@ -4493,14 +4493,14 @@ impl Browser {
                             }
                             return;
                         }
-                        let meta = crate::filters::ListMeta {
-                            source: crate::filters::LIST_NAME.to_owned(),
+                        let meta = peats_core::filters::ListMeta {
+                            source: peats_core::filters::LIST_NAME.to_owned(),
                             url: url.clone(),
-                            license: crate::filters::LIST_LICENSE.to_owned(),
-                            updated_at: crate::filters::now(),
+                            license: peats_core::filters::LIST_LICENSE.to_owned(),
+                            updated_at: peats_core::filters::now(),
                             hosts: hosts.len(),
                         };
-                        match crate::filters::save_cache(&directory, &meta, &hosts) {
+                        match peats_core::filters::save_cache(&directory, &meta, &hosts) {
                             Ok(()) => {
                                 browser.refresh_content_filter();
                                 browser.toast(&format!(
@@ -4527,9 +4527,9 @@ impl Browser {
 
     /// Aggiorna la lista in background all'avvio se la copia è vecchia.
     fn schedule_list_update(self: &Rc<Self>) {
-        let stale = crate::filters::load_cache(&self.filter_dir())
+        let stale = peats_core::filters::load_cache(&self.filter_dir())
             .map(|(meta, _)| {
-                crate::filters::is_stale(&meta, crate::filters::now(), crate::filters::MAX_AGE)
+                peats_core::filters::is_stale(&meta, peats_core::filters::now(), peats_core::filters::MAX_AGE)
             })
             .unwrap_or(true);
         if !stale {
@@ -5245,7 +5245,7 @@ impl Browser {
             folder_row.add_suffix(&open_folder);
             list.append(&folder_row);
 
-            let extensions = crate::extensions::load_all(&browser.paths.extensions_dir);
+            let extensions = peats_core::extensions::load_all(&browser.paths.extensions_dir);
             if extensions.is_empty() {
                 add_empty_state(
                     list,
@@ -6034,7 +6034,7 @@ impl Browser {
             .file_name()
             .and_then(|name| name.to_str())
             .unwrap_or("file");
-        match crate::import::parse(&bytes, name) {
+        match peats_core::import::parse(&bytes, name) {
             Ok(data) => self.apply_import(data),
             Err(error) => {
                 self.show_import_summary("Importazione non riuscita", &format!("{error:#}"))
@@ -6042,7 +6042,7 @@ impl Browser {
         }
     }
 
-    fn apply_import(self: &Rc<Self>, data: crate::import::ImportData) {
+    fn apply_import(self: &Rc<Self>, data: peats_core::import::ImportData) {
         if data.is_empty() && data.notes.is_empty() {
             self.show_import_summary(
                 "Nessun dato",
@@ -6074,11 +6074,11 @@ impl Browser {
         }
 
         if !data.credentials.is_empty() {
-            match crate::keyring::passwords_key() {
+            match peats_core::keyring::passwords_key() {
                 Ok(key) => {
                     let mut rows = Vec::new();
                     for credential in &data.credentials {
-                        match crate::crypto::encrypt(&key, credential.password.as_bytes()) {
+                        match peats_core::crypto::encrypt(&key, credential.password.as_bytes()) {
                             Ok((nonce, secret)) => rows.push((
                                 credential.host(),
                                 credential.url.clone(),
@@ -6131,7 +6131,7 @@ impl Browser {
     /// senza mai mostrarla a schermo.
     fn open_credentials(self: &Rc<Self>) {
         self.open_list_window("Account e password", |browser, list| {
-            let key = crate::keyring::passwords_key();
+            let key = peats_core::keyring::passwords_key();
             let entries = browser.storage.credentials().unwrap_or_default();
             if entries.is_empty() {
                 add_empty_state(
@@ -6207,7 +6207,7 @@ impl Browser {
                     return;
                 };
                 let password =
-                    String::from_utf8_lossy(&crate::crypto::decrypt(&key, &nonce, &secret))
+                    String::from_utf8_lossy(&peats_core::crypto::decrypt(&key, &nonce, &secret))
                         .to_string();
                 browser.window.clipboard().set_text(&password);
                 browser.toast("Password copiata negli appunti");
@@ -6471,7 +6471,7 @@ impl Browser {
         consent_row.set_title("Gestione banner cookie");
         consent_row.set_subtitle(&format!(
             "Clicca solo il rifiuto previsto da: {}",
-            crate::consent::cmp_names().join(", ")
+            peats_core::consent::cmp_names().join(", ")
         ));
         consent_row.set_active(self.state.borrow().settings.cookie_banner_helper);
         privacy.add(&consent_row);
@@ -6855,7 +6855,7 @@ impl Browser {
                 };
                 let url = row.text().trim().to_owned();
                 let url = if url.is_empty() {
-                    crate::update::DEFAULT_REPO_URL.to_owned()
+                    peats_core::update::DEFAULT_REPO_URL.to_owned()
                 } else {
                     url
                 };
@@ -7265,7 +7265,7 @@ impl Browser {
                 let keyword = if keyword_input.is_empty() {
                     String::new()
                 } else {
-                    match crate::model::valid_keyword(&keyword_input) {
+                    match peats_core::model::valid_keyword(&keyword_input) {
                         Some(keyword) => keyword,
                         None => {
                             error_label.set_text(

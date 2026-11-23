@@ -1,0 +1,16 @@
+[package]
+name = "peats-core"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.92"
+description = "Moduli di Peats indipendenti dall'interfaccia: dati, cronologia, importazione, aggiornamenti"
+license = "MIT"
+
+[dependencies]
+anyhow = "1.0"
+dirs = "7.0"
+rusqlite = { version = "0.43.0", features = ["bundled"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+sha2 = "0.10"
+url = "2.5.9"

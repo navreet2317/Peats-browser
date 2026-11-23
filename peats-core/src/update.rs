@@ -115,9 +115,9 @@ pub fn manifest_from_github_release(text: &str) -> Result<Manifest> {
     let asset = release
         .assets
         .iter()
-        .filter(|asset| asset.name.to_ascii_lowercase().ends_with(".rpm"))
-        .min_by_key(|asset| rpm_rank(&asset.name))
-        .context("la release non contiene un pacchetto RPM")?;
+        .filter(|asset| is_package(&asset.name))
+        .min_by_key(|asset| package_rank(&asset.name))
+        .with_context(|| format!("la release non contiene un pacchetto {}", PACKAGE_LABEL))?;
     if !asset.browser_download_url.starts_with("https://") {
         bail!("la release non indica un indirizzo HTTPS per il pacchetto");
     }
@@ -139,9 +139,28 @@ pub fn manifest_from_github_release(text: &str) -> Result<Manifest> {
     })
 }
 
-/// Ordine di preferenza fra più pacchetti RPM allegati.
-fn rpm_rank(name: &str) -> u8 {
-    if name.to_ascii_lowercase().contains("x86_64") {
+/// Estensioni accettate per il pacchetto di aggiornamento sulla piattaforma
+/// corrente: RPM su Linux, MSI o EXE su Windows.
+fn is_package(name: &str) -> bool {
+    #[cfg(windows)]
+    const EXTENSIONS: [&str; 2] = [".msi", ".exe"];
+    #[cfg(not(windows))]
+    const EXTENSIONS: [&str; 1] = [".rpm"];
+
+    let name = name.to_ascii_lowercase();
+    EXTENSIONS.iter().any(|extension| name.ends_with(extension))
+}
+
+#[cfg(windows)]
+const PACKAGE_LABEL: &str = "MSI o EXE";
+#[cfg(not(windows))]
+const PACKAGE_LABEL: &str = "RPM";
+
+/// Ordine di preferenza fra più pacchetti allegati: prima quelli per
+/// l'architettura corrente, poi gli altri.
+fn package_rank(name: &str) -> u8 {
+    let name = name.to_ascii_lowercase();
+    if name.contains("x86_64") || name.contains("x64") {
         0
     } else {
         1
@@ -193,22 +212,50 @@ pub fn sha256_hex(bytes: &[u8]) -> String {
 }
 
 /// Solo un'installazione di sistema può aggiornarsi: una build di sviluppo non
-/// deve sovrascrivere file in `/usr`.
+/// deve sovrascrivere file di sistema.
 pub fn managed_install() -> bool {
-    std::env::current_exe()
-        .map(|path| {
-            let text = path.to_string_lossy();
-            text.starts_with("/usr/bin/") || text.starts_with("/usr/local/bin/")
-        })
-        .unwrap_or(false)
+    let Ok(path) = std::env::current_exe() else {
+        return false;
+    };
+    let text = path.to_string_lossy();
+
+    #[cfg(windows)]
+    {
+        let lowered = text.to_ascii_lowercase();
+        !(lowered.contains("\\target\\debug\\") || lowered.contains("\\target\\release\\"))
+    }
+    #[cfg(not(windows))]
+    {
+        text.starts_with("/usr/bin/") || text.starts_with("/usr/local/bin/")
+    }
 }
 
-/// `pkexec dnf install -y <pacchetto>`: l'autorizzazione la gestisce polkit,
-/// l'app non chiede né conserva password di amministratore.
+/// Comando che installa il pacchetto scaricato.
+///
+/// Su Linux è `pkexec dnf install -y`: l'autorizzazione la gestisce polkit e
+/// l'app non chiede né conserva password di amministratore. Su Windows un MSI
+/// passa da `msiexec`, un EXE viene avviato direttamente (il programma di
+/// installazione chiede da sé l'elevazione).
+#[cfg(not(windows))]
 pub fn install_command(package: &std::path::Path) -> std::process::Command {
     let mut command = std::process::Command::new("pkexec");
     command.args(["dnf", "install", "-y"]).arg(package);
     command
+}
+
+#[cfg(windows)]
+pub fn install_command(package: &std::path::Path) -> std::process::Command {
+    let extension = package
+        .extension()
+        .map(|extension| extension.to_string_lossy().to_ascii_lowercase())
+        .unwrap_or_default();
+    if extension == "msi" {
+        let mut command = std::process::Command::new("msiexec");
+        command.arg("/i").arg(package);
+        command
+    } else {
+        std::process::Command::new(package)
+    }
 }
 
 #[cfg(test)]

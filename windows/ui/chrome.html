@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Peats</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f6f5f4;
+    --fg: #1d1d1f;
+    --field: #ffffff;
+    --border: rgba(0, 0, 0, 0.14);
+    --accent: #3584e4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1e1e20;
+      --fg: #f2f1f0;
+      --field: #2a2a2d;
+      --border: rgba(255, 255, 255, 0.14);
+      --accent: #62a0ea;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: var(--bg);
+    color: var(--fg);
+    font: 13px/1.3 system-ui, "Segoe UI", sans-serif;
+    user-select: none;
+  }
+  button {
+    width: 32px;
+    height: 32px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: inherit;
+    font-size: 15px;
+    cursor: pointer;
+  }
+  button:hover { background: var(--border); }
+  button:active { background: var(--accent); color: #fff; }
+  #address {
+    flex: 1;
+    height: 32px;
+    padding: 0 12px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--field);
+    color: inherit;
+    font: inherit;
+    outline: none;
+  }
+  #address:focus { border-color: var(--accent); }
+</style>
+</head>
+<body>
+  <button id="back" title="Indietro">&#8592;</button>
+  <button id="forward" title="Avanti">&#8594;</button>
+  <button id="reload" title="Ricarica">&#8635;</button>
+  <input id="address" type="text" spellcheck="false" autocomplete="off"
+         placeholder="Cerca o inserisci un indirizzo">
+  <button id="go" title="Vai">&#8629;</button>
+  <script>
+    const address = document.getElementById("address");
+    const send = (message) => window.ipc.postMessage(JSON.stringify(message));
+
+    const go = () => {
+      const value = address.value.trim();
+      if (value) send({ cmd: "navigate", url: value });
+    };
+
+    document.getElementById("back").onclick = () => send({ cmd: "back" });
+    document.getElementById("forward").onclick = () => send({ cmd: "forward" });
+    document.getElementById("reload").onclick = () => send({ cmd: "reload" });
+    document.getElementById("go").onclick = go;
+    address.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") go();
+    });
+
+    // Chiamata da Rust a ogni navigazione conclusa.
+    window.peats = {
+      setAddress(url) {
+        if (document.activeElement !== address) address.value = url;
+      },
+    };
+  </script>
+</body>
+</html>

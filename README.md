@@ -30,11 +30,19 @@ Una finestra sola, niente telemetria, dati solo in locale.
 
 ## Requisiti
 
+Linux (build principale):
+
 - Fedora (testato su Fedora 44) con GTK 4.22, libadwaita 1.9 e WebKitGTK 6.0
   (2.52 o successivo).
 - Rust 1.92 o successivo. `rusqlite` compila SQLite incluso nel crate, quindi non
   serve la libreria di sviluppo separata.
 - Per l'importazione delle password serve `secret-tool` (pacchetto `libsecret`).
+
+Windows (port in preparazione):
+
+- Windows 10/11 con WebView2 Runtime (presente di serie su Windows 11).
+- Rust stabile e i Build Tools di Visual Studio con il carico C++.
+- Nessuna dipendenza GTK: il motore è WebView2 tramite `wry`.
 
 ## Compilare ed eseguire
 
@@ -62,10 +70,31 @@ rpmbuild --define "_topdir $PWD/packaging/rpmbuild" -bb packaging/rpmbuild/SPECS
 Il pacchetto esce in `packaging/rpmbuild/RPMS/x86_64/` e si installa con
 `dnf install` o `rpm -i`. Serve WebKitGTK 6.0, GTK 4 e libadwaita di sistema.
 
+## Peats per Windows
+
+WebKitGTK non esiste su Windows, quindi la variante Windows usa **WebView2**
+(Edge/Chromium) al suo posto: due WebView, la barra dell'indirizzo sopra e la
+pagina sotto. Il resto — impostazioni, cronologia SQLite, risoluzione degli
+indirizzi, importazione, aggiornamenti — arriva dal crate condiviso `peats-core`.
+
+```bash
+cargo build --release -p peats-windows
+.\target\release\peats-windows.exe
+```
+
+Stato del port: funzionano navigazione, indietro/avanti, ricarica, barra
+collegata all'indirizzo corrente e registrazione della cronologia. Mancano
+schede multiple, spazi di lavoro, preferenze, segnalibri, importazione dalla GUI
+e l'aggiornamento automatico specifico per Windows: sono i passaggi successivi.
+La compilazione è verificata dal workflow `.github/workflows/windows.yml`; la
+build non è mai stata eseguita su una macchina Windows reale durante lo
+sviluppo, quindi il primo avvio va provato lì.
+
 ## Test
 
 ```bash
-cargo test          # 71 test unitari
+cargo test                  # 71 test (build Linux + crate condiviso)
+cargo test -p peats-core    # test del solo crate condiviso
 cargo clippy --all-targets
 ```
 
@@ -122,19 +151,23 @@ chiave del profilo): per quelle serve l'esportazione CSV.
 ## Struttura
 
 ```
-src/main.rs         avvio, application ID, CSS
-src/browser.rs      finestra, schede, spazi, vista affiancata, preferenze
-src/model.rs        Settings, Session, segnalibri, cronologia
-src/url.rs          risoluzione di indirizzi e ricerche
-src/storage.rs      SQLite (cronologia FTS5, credenziali) e JSON
-src/filters.rs      blocco contenuti e filtri cosmetici
-src/suggest.rs      suggerimenti della barra indirizzi
-src/import.rs       importazione da altri browser
-src/crypto.rs       ChaCha20 per le password
-src/keyring.rs      chiave nel portachiavi di sistema
-src/update.rs       release GitHub, versioni, SHA-256
-src/style.css       stile dell'interfaccia
-packaging/          spec RPM e asset .desktop/.svg
+src/main.rs           avvio, application ID, CSS
+src/browser.rs        finestra, schede, spazi, vista affiancata, preferenze
+src/style.css         stile dell'interfaccia GTK
+
+peats-core/src/model.rs      Settings, Session, segnalibri, cronologia
+peats-core/src/url.rs        risoluzione di indirizzi e ricerche
+peats-core/src/storage.rs    SQLite (cronologia FTS5, credenziali) e JSON
+peats-core/src/filters.rs    blocco contenuti e filtri cosmetici
+peats-core/src/suggest.rs    suggerimenti della barra indirizzi
+peats-core/src/import.rs     importazione da altri browser
+peats-core/src/crypto.rs     ChaCha20 per le password
+peats-core/src/keyring.rs    chiave nel portachiavi (secret-tool / DPAPI)
+peats-core/src/update.rs     release GitHub, versioni, SHA-256
+
+windows/src/main.rs   barra e pagina WebView2, comandi e cronologia
+windows/ui/chrome.html  interfaccia della barra su Windows
+packaging/            spec RPM e asset .desktop/.svg
 ```
 
 ## Licenza

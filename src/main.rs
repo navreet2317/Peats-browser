@@ -1,18 +1,4 @@
-mod blocklist;
 mod browser;
-mod consent;
-mod crypto;
-mod extensions;
-mod filters;
-mod import;
-mod keyring;
-mod model;
-mod privacy;
-mod reader;
-mod storage;
-mod suggest;
-mod update;
-mod url;
 
 use adw::prelude::*;
 use gtk::glib;
