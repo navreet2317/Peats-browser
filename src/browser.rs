@@ -1300,7 +1300,7 @@ impl Browser {
     }
 
     fn maybe_check_updates(self: &Rc<Self>, manual: bool) {
-        let (enabled, url, last) = {
+        let (enabled, configured, last) = {
             let state = self.state.borrow();
             (
                 state.settings.check_updates,
@@ -1316,25 +1316,30 @@ impl Browser {
                 return;
             }
         }
-        if url.is_empty() {
-            if manual {
-                self.toast("Imposta l'indirizzo del manifest nelle Preferenze");
-            }
-            return;
-        }
+        let url = if configured.is_empty() {
+            crate::update::DEFAULT_REPO_URL.to_owned()
+        } else {
+            configured
+        };
         if !url.starts_with("https://") {
-            self.toast("Il manifest degli aggiornamenti deve usare HTTPS");
+            self.toast("Il controllo degli aggiornamenti richiede un indirizzo HTTPS");
             return;
         }
+        // Un indirizzo di repository GitHub diventa la richiesta alla API delle
+        // release; qualsiasi altro indirizzo è letto come manifest JSON.
+        let github = crate::update::github_api_url(&url);
+        let endpoint = github.clone().unwrap_or_else(|| url.clone());
         if manual {
             self.toast("Controllo degli aggiornamenti…");
         }
 
-        let Ok(message) = soup::Message::new("GET", &url) else {
-            self.toast("Indirizzo del manifest non valido");
+        let Ok(message) = soup::Message::new("GET", &endpoint) else {
+            self.toast("Indirizzo degli aggiornamenti non valido");
             return;
         };
         let session = soup::Session::new();
+        // Il messaggio serve ancora nel callback per il codice di stato HTTP.
+        let probe = message.clone();
         let weak = Rc::downgrade(self);
         session.send_and_read_async(
             &message,
@@ -1344,16 +1349,41 @@ impl Browser {
                 let Some(browser) = weak.upgrade() else {
                     return;
                 };
+                let from_github = github.is_some();
+                // Un controllo automatico non deve disturbare: gli errori si
+                // mostrano solo quando l'utente ha chiesto esplicitamente.
+                let report = |message: &str| {
+                    if manual {
+                        browser.toast(message);
+                    }
+                };
                 let bytes = match result {
                     Ok(bytes) => bytes,
                     Err(error) => {
-                        browser.toast(&format!("Controllo aggiornamenti non riuscito: {error}"));
+                        report(&format!("Controllo aggiornamenti non riuscito: {error}"));
                         return;
                     }
                 };
-                match crate::update::parse_manifest(&String::from_utf8_lossy(bytes.as_ref())) {
+                let text = String::from_utf8_lossy(bytes.as_ref()).into_owned();
+                if from_github {
+                    let status = probe.status_code();
+                    if status == 404 {
+                        report("Nessuna release pubblicata nel repository GitHub");
+                        return;
+                    }
+                    if !(200..300).contains(&status) {
+                        report(&format!("GitHub ha risposto con l'errore {status}"));
+                        return;
+                    }
+                }
+                let parsed = if from_github {
+                    crate::update::manifest_from_github_release(&text)
+                } else {
+                    crate::update::parse_manifest(&text)
+                };
+                match parsed {
                     Ok(manifest) => browser.offer_update(manifest),
-                    Err(error) => browser.toast(&format!("{error:#}")),
+                    Err(error) => report(&format!("{error:#}")),
                 }
             },
         );
@@ -1382,6 +1412,12 @@ impl Browser {
             "Scaricare e installare l'aggiornamento adesso? Il pacchetto viene controllato \
              con SHA-256 prima dell'installazione.",
         );
+        if manifest.sha256.trim().is_empty() {
+            body.push_str(
+                "\n\nLa release non pubblica lo SHA-256 del pacchetto: senza un hash da \
+                 confrontare l'installazione viene annullata.",
+            );
+        }
         if !manifest.notes.trim().is_empty() {
             body.push_str("\n\n");
             body.push_str(manifest.notes.trim());
@@ -1443,7 +1479,7 @@ impl Browser {
     fn install_update(self: &Rc<Self>, manifest: &crate::update::Manifest, bytes: &[u8]) {
         let expected = manifest.sha256.trim().to_ascii_lowercase();
         if expected.is_empty() {
-            self.toast("Il manifest non contiene lo SHA-256: aggiornamento annullato");
+            self.toast("La release non contiene lo SHA-256 del pacchetto: aggiornamento annullato");
             return;
         }
         if crate::update::sha256_hex(bytes) != expected {
@@ -6758,9 +6794,10 @@ impl Browser {
         let updates = adw::PreferencesGroup::new();
         updates.set_title("Aggiornamenti");
         updates.set_description(Some(
-            "Peats legge un manifest JSON (version, url del pacchetto RPM, sha256, notes) \
-             dall'indirizzo indicato e propone l'installazione quando la versione è più \
-             recente. Il controllo automatico avviene una volta al giorno.",
+            "Peats guarda l'ultima release del repository GitHub indicato (oppure un manifest \
+             JSON con version, url del pacchetto RPM, sha256 e notes) e propone di installarla \
+             quando la versione è più recente. Il controllo automatico avviene una volta al \
+             giorno, solo verso l'indirizzo scritto qui sotto.",
         ));
 
         let check_row = adw::SwitchRow::new();
@@ -6770,7 +6807,7 @@ impl Browser {
         updates.add(&check_row);
 
         let update_url_row = adw::EntryRow::new();
-        update_url_row.set_title("Manifest degli aggiornamenti (HTTPS)");
+        update_url_row.set_title("Repository GitHub o manifest (HTTPS)");
         update_url_row.set_show_apply_button(true);
         update_url_row.set_text(&self.state.borrow().settings.update_url);
         updates.add(&update_url_row);
@@ -6817,6 +6854,11 @@ impl Browser {
                     return;
                 };
                 let url = row.text().trim().to_owned();
+                let url = if url.is_empty() {
+                    crate::update::DEFAULT_REPO_URL.to_owned()
+                } else {
+                    url
+                };
                 let changed = {
                     let mut state = browser.state.borrow_mut();
                     if state.settings.update_url == url {
@@ -6828,7 +6870,7 @@ impl Browser {
                 };
                 if changed {
                     browser.save_settings();
-                    browser.toast("Indirizzo del manifest salvato");
+                    browser.toast("Indirizzo degli aggiornamenti salvato");
                 }
             });
         }

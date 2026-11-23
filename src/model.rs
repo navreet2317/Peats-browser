@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+use crate::update::DEFAULT_REPO_URL;
 use crate::url::DUCKDUCKGO_TEMPLATE;
 
 pub type TabId = u64;
@@ -151,10 +152,11 @@ pub struct Settings {
     #[serde(default = "default_history_days")]
     pub history_retention_days: i64,
     /// Controllo automatico degli aggiornamenti (una volta al giorno).
-    #[serde(default)]
+    #[serde(default = "enabled")]
     pub check_updates: bool,
-    /// Indirizzo HTTPS del manifest che descrive l'ultima versione.
-    #[serde(default)]
+    /// Repository GitHub da controllare, oppure indirizzo HTTPS di un manifest
+    /// JSON con la stessa informazione.
+    #[serde(default = "default_update_url")]
     pub update_url: String,
     /// Secondi dall'epoca dell'ultimo controllo riuscito.
     #[serde(default)]
@@ -163,6 +165,10 @@ pub struct Settings {
 
 fn default_history_days() -> i64 {
     365
+}
+
+fn default_update_url() -> String {
+    DEFAULT_REPO_URL.to_owned()
 }
 
 impl Default for Settings {
@@ -180,8 +186,8 @@ impl Default for Settings {
             cosmetic_blocking: true,
             unload_inactive_tabs: false,
             history_retention_days: default_history_days(),
-            check_updates: false,
-            update_url: String::new(),
+            check_updates: true,
+            update_url: default_update_url(),
             last_update_check: 0,
         }
     }
@@ -201,6 +207,15 @@ impl Settings {
 
         self.engines
             .retain(|engine| engine.id == DUCKDUCKGO_ID || engine.is_valid_template());
+
+        // Impostazioni salvate prima che gli aggiornamenti avessero un
+        // indirizzo predefinito: prova il repository ufficiale una volta al
+        // giorno invece di restare senza controllo.
+        if self.update_url.trim().is_empty() {
+            self.update_url = default_update_url();
+            self.check_updates = true;
+            self.last_update_check = 0;
+        }
 
         for engine in &mut self.engines {
             if engine.id != DUCKDUCKGO_ID {
@@ -424,6 +439,27 @@ mod tests {
         assert_eq!(settings.default_engine, DUCKDUCKGO_ID);
         assert!(!settings.remove_engine(DUCKDUCKGO_ID));
         assert_eq!(settings.engines.len(), 1);
+    }
+
+    #[test]
+    fn updates_look_at_the_github_repository_by_default() {
+        let settings = Settings::default();
+        assert!(settings.check_updates);
+        assert_eq!(settings.update_url, DEFAULT_REPO_URL);
+
+        let mut legacy = Settings::default();
+        legacy.update_url = String::new();
+        legacy.check_updates = false;
+        let legacy = legacy.sanitize();
+        assert_eq!(legacy.update_url, DEFAULT_REPO_URL);
+        assert!(legacy.check_updates);
+
+        let mut custom = Settings::default();
+        custom.update_url = "https://esempio.test/manifest.json".to_owned();
+        custom.check_updates = false;
+        let custom = custom.sanitize();
+        assert_eq!(custom.update_url, "https://esempio.test/manifest.json");
+        assert!(!custom.check_updates);
     }
 
     #[test]
