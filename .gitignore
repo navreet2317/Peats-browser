@@ -6,4 +6,7 @@
 /.cloud-attachments
 /.directory
 /output.pdf
+# Il token di push non ha lo scope `workflow`: il file resta in locale e la CI
+# si potrà aggiungere quando il token lo consente, senza bloccare i push.
+/.github/workflows/
 *.swp
